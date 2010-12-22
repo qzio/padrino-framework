@@ -1138,15 +1138,26 @@ class TestRouting < Test::Unit::TestCase
     assert_equal "POST CREATE bar - baz - 5", body, "should properly post to create action"
   end
 
-  should "have overideable format" do
-    mock_app do
-      ::Rack::Mime::MIME_TYPES[".other"] = "text/html"
-      before do
-        params[:format] ||= :other
+    should "have overrideable format" do
+      mock_app do
+        ::Rack::Mime::MIME_TYPES[".other"] = "text/html"
+        before do
+          params[:format] ||= :other
+        end
+        get("/format_test", :provides => [:html, :other]){ content_type }
+        controllers :override_formats do
+          before do
+            params[:format] = :other
+          end
+          get(:test, :provides => [:html, :other]) { params.inspect }
+        end
       end
-      get("/format_test", :provides => [:html, :other]){ content_type }
+      get "/format_test"
+      assert_equal "other", body
+      get "/override_formats/test"
+      assert_equal "{:format=>:other}", body
+      get "/override_formats/test.other"
+      assert_equal "{:format=>:other}", body
     end
-    get "/format_test"
-    assert_equal "other", body
-  end
+
 end
